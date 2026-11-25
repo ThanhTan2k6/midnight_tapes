@@ -1,0 +1,21 @@
+# Midnight Tapes - Agent & Coding Assistant Instructions
+
+You are working on "Tiệm Băng Nửa Đêm" (Midnight Tapes), an ambient cathartic web experience.
+Always abide by these core directives:
+
+1. GOLDEN RULES ENFORCEMENT:
+- Never implement text chat or continuous message exchanges between users.
+- Never add user profile pages, personal avatars, or social/Gmail login requirements. Identity is zero-login using anonymous session UUID + backend IP-hash (never store raw IP, never use IP alone as private mailbox key due to shared Wi-Fi/CGNAT).
+- Enforce 24-hour time-to-live (TTL) on all recordings and responses.
+- Route heavy psychological distress / crisis tapes through the one-shot Psychological First Aid RAG pipeline (grounded coping guidance + hotlines, never an open-ended chatbot).
+- Respect the mechanical skeuomorphic feel: every interaction must map to audio feedback and tactile cassette operations.
+
+2. CODE QUALITY & PATTERNS:
+- Use TypeScript strictly.
+- When writing Web Audio code, ensure proper browser autoplay policy compliance (unlock AudioContext on first user interaction).
+- Audio recordings must support up to 7 minutes (420 seconds) for main tapes (with Pause/Resume support) and up to 3 minutes (180 seconds) for voice replies, with precise countdown timers and waveform/VU meter animations.
+- Always support cross-platform mobile & desktop (Mobile = Sony Walkman hand-held POV; Desktop = Wooden desk late-night ambient view).
+
+3. TONE OF VOICE:
+- All user-facing Vietnamese copy must be warm, serene, poetic, and respectful.
+- Avoid robotic or cold clinical jargon.

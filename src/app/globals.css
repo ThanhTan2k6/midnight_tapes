@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+:root {
+  --midnight-void: #080706;
+  --wood-desk-base: #161311;
+  --wood-desk-highlight: #29231e;
+  --amber-lamp: #d97706;
+  --amber-glow: #f59e0b;
+  --tape-ribbon: #451a03;
+  --sticker-parchment: #f3efe0;
+  --led-rec-active: #ef4444;
+  --tea-steam: #fef3c7;
+}
+
+@theme inline {
+  --color-midnight-void: var(--midnight-void);
+  --color-wood-desk-base: var(--wood-desk-base);
+  --color-wood-desk-highlight: var(--wood-desk-highlight);
+  --color-amber-lamp: var(--amber-lamp);
+  --color-amber-glow: var(--amber-glow);
+  --color-tape-ribbon: var(--tape-ribbon);
+  --color-sticker-parchment: var(--sticker-parchment);
+  --color-led-rec-active: var(--led-rec-active);
+  --color-tea-steam: var(--tea-steam);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-hand: var(--font-patrick-hand), cursive;
+  --font-lcd: var(--font-vt323), monospace;
+}
+
+body {
+  background-color: var(--midnight-void);
+  color: var(--tea-steam);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
