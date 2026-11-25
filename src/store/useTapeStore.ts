@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { TapeTag } from "@/types/tape";
 import { AUDIO_CONSTRAINTS } from "@/types/tape";
 
-export type DeckMode = "RECORD" | "LISTEN";
+export type DeckMode = "RECORD" | "LISTEN" | "MAILBOX";
 
 export type DeckStatus =
   | "IDLE"
@@ -21,7 +21,11 @@ export interface TapeState {
   selectedTag: TapeTag;
   voiceMaskEnabled: boolean;
 
-  // Ambient sound controls
+  // Ambient & 2-Layer Scene controls
+  deckOpen: boolean;
+  doorEventCount: number;
+  lightningEventCount: number;
+  hasUnreadReply: boolean;
   audioUnlocked: boolean;
   rainEnabled: boolean;
   rainVolume: number; // 0.0 -> 1.0
@@ -35,10 +39,15 @@ export interface TapeState {
   // Actions
   setMode: (mode: DeckMode) => void;
   setStatus: (status: DeckStatus) => void;
+  setElapsedSeconds: (seconds: number) => void;
   tickSecond: () => void;
   setSelectedTag: (tag: TapeTag) => void;
   toggleVoiceMask: () => void;
   setAudioUnlocked: (unlocked: boolean) => void;
+  setHasUnreadReply: (unread: boolean) => void;
+  setDeckOpen: (open: boolean) => void;
+  triggerDoorEvent: () => void;
+  triggerLightningEvent: () => void;
   toggleRain: () => void;
   setRainVolume: (volume: number) => void;
   triggerTeaSteam: () => void;
@@ -53,6 +62,10 @@ export const useTapeStore = create<TapeState>((set, get) => ({
   selectedTag: "QUARTER_LIFE",
   voiceMaskEnabled: false,
 
+  deckOpen: false,
+  doorEventCount: 0,
+  lightningEventCount: 0,
+  hasUnreadReply: false,
   audioUnlocked: false,
   rainEnabled: false,
   rainVolume: 0.45,
@@ -70,6 +83,8 @@ export const useTapeStore = create<TapeState>((set, get) => ({
     }),
 
   setStatus: (status) => set({ status }),
+
+  setElapsedSeconds: (elapsedSeconds) => set({ elapsedSeconds }),
 
   tickSecond: () => {
     const { status, elapsedSeconds, mode, activeListenDuration, recordedDuration } = get();
@@ -108,6 +123,16 @@ export const useTapeStore = create<TapeState>((set, get) => ({
     set((state) => ({ voiceMaskEnabled: !state.voiceMaskEnabled })),
 
   setAudioUnlocked: (audioUnlocked) => set({ audioUnlocked }),
+
+  setHasUnreadReply: (hasUnreadReply) => set({ hasUnreadReply }),
+
+  setDeckOpen: (deckOpen) => set({ deckOpen }),
+
+  triggerDoorEvent: () =>
+    set((state) => ({ doorEventCount: state.doorEventCount + 1 })),
+
+  triggerLightningEvent: () =>
+    set((state) => ({ lightningEventCount: state.lightningEventCount + 1 })),
 
   toggleRain: () => set((state) => ({ rainEnabled: !state.rainEnabled })),
 

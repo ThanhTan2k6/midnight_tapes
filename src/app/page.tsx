@@ -1,10 +1,5 @@
-import { AmbientDesk } from "@/components/AmbientDesk";
-import { CassetteDeck } from "@/components/CassetteDeck";
+import { AmbientScene } from "@/components/scene/AmbientScene";
 
 export default function Home() {
-  return (
-    <AmbientDesk>
-      <CassetteDeck />
-    </AmbientDesk>
-  );
+  return <AmbientScene />;
 }

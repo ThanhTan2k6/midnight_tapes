@@ -280,6 +280,66 @@ class MidnightSoundEngine {
     this.playSfxBuffer("toggle", 0.65, 1.05);
   }
 
+  /** Tiếng chuông cửa quán cà phê ("Kính coong") khi có khách bước vào */
+  public playDoorBell(): void {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    const chimes = [
+      { freq: 1046.5, delay: 0, dur: 1.1 }, // C6
+      { freq: 1318.5, delay: 0.14, dur: 1.3 }, // E6
+    ];
+
+    chimes.forEach(({ freq, delay, dur }) => {
+      const start = ctx.currentTime + delay;
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, start);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.001, start);
+      gain.gain.linearRampToValueAtTime(0.09, start + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0005, start + dur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + dur + 0.05);
+    });
+  }
+
+  /** Tiếng sấm rền trầm ấm ngoài trời mưa */
+  public playThunderSound(): void {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    const duration = 2.4;
+    const bufferSize = Math.floor(ctx.sampleRate * duration);
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] =
+        (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.7));
+    }
+
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(140, ctx.currentTime);
+    filter.frequency.linearRampToValueAtTime(55, ctx.currentTime + duration);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.35, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    noise.start();
+  }
+
   /** Tiếng chuông gió dịu dàng khi gửi Tách trà ấm */
   public playTeaChime(): void {
     const ctx = this.ensureContext();

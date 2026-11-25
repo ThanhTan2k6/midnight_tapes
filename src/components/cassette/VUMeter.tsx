@@ -5,27 +5,31 @@ import { useEffect, useState } from "react";
 interface VUMeterProps {
   active: boolean;
   mode: "RECORD" | "LISTEN";
+  /** Real-time audio amplitude (0.0 -> 1.0) from AnalyserNode */
+  level?: number;
 }
 
-export function VUMeter({ active, mode }: VUMeterProps) {
-  // Angle in degrees (-42deg = -20dB rest, +36deg = +3dB peak)
-  const [angle, setAngle] = useState(-42);
+export function VUMeter({ active, mode, level }: VUMeterProps) {
+  const [simAngle, setSimAngle] = useState(-42);
 
   useEffect(() => {
-    if (!active) return;
+    if (!active || level !== undefined) return;
 
     const interval = setInterval(() => {
-      // Simulate organic speech amplitude modulation
       const base = mode === "RECORD" ? -12 : -8;
       const swing = (Math.random() - 0.35) * 38;
       const next = Math.max(-38, Math.min(34, base + swing));
-      setAngle(next);
+      setSimAngle(next);
     }, 130);
 
     return () => clearInterval(interval);
-  }, [active, mode]);
+  }, [active, mode, level]);
 
-  const displayAngle = active ? angle : -42;
+  const displayAngle = !active
+    ? -42
+    : level !== undefined
+    ? -42 + Math.min(1, Math.max(0, level)) * 76
+    : simAngle;
 
   return (
     <div
@@ -87,7 +91,7 @@ export function VUMeter({ active, mode }: VUMeterProps) {
 
       {/* Swinging Needle */}
       <div
-        className="absolute bottom-[-6px] left-1/2 w-[1.5px] h-11 bg-red-400 origin-bottom transition-transform duration-100 ease-out z-20 shadow-[0_0_4px_rgba(248,113,113,0.7)]"
+        className="absolute bottom-[-6px] left-1/2 w-[1.5px] h-11 bg-red-400 origin-bottom transition-transform duration-75 ease-out z-20 shadow-[0_0_4px_rgba(248,113,113,0.7)]"
         style={{
           transform: `translateX(-50%) rotate(${displayAngle}deg)`,
         }}
