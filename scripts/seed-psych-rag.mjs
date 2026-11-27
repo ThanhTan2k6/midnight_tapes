@@ -12,10 +12,23 @@ import { createClient } from "@supabase/supabase-js";
 for (const envFile of [".env.local", ".env"]) {
   const fullPath = path.resolve(process.cwd(), envFile);
   if (fs.existsSync(fullPath)) {
-    for (const line of fs.readFileSync(fullPath, "utf8").split(/\r?\n/)) {
-      const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
-      if (match && match[2] && !process.env[match[1]]) {
-        process.env[match[1]] = match[2].trim();
+    for (const rawLine of fs.readFileSync(fullPath, "utf8").split(/\r?\n/)) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith("#")) continue;
+      const eqIdx = line.indexOf("=");
+      if (eqIdx === -1) continue;
+
+      const key = line.slice(0, eqIdx).trim();
+      let val = line.slice(eqIdx + 1).trim();
+      if (
+        (val.startsWith('"') && val.endsWith('"')) ||
+        (val.startsWith("'") && val.endsWith("'"))
+      ) {
+        val = val.slice(1, -1);
+      }
+
+      if (key && val && !process.env[key]) {
+        process.env[key] = val;
       }
     }
   }

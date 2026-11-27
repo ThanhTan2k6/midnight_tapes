@@ -103,6 +103,7 @@ export function saveLocalTapeLog(entry: LocalTapeLogEntry): void {
 
 export async function initSession(): Promise<{
   token: string;
+  snapshotValid: boolean;
   activeTapesCount: number;
   hasUnreadReply: boolean;
   totalTeaCount: number;
@@ -115,6 +116,7 @@ export async function initSession(): Promise<{
     if (!res.ok) return null;
     const data = (await res.json()) as {
       token: string;
+      snapshotValid: boolean;
       activeTapesCount: number;
       hasUnreadReply: boolean;
       totalTeaCount: number;

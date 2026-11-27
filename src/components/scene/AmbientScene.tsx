@@ -28,11 +28,17 @@ export function AmbientScene() {
   const [notificationText, setNotificationText] = useState<string | null>(null);
   const prevUnreadRef = useRef(false);
   const prevTeaCountRef = useRef<number | null>(null);
+  const pollSeqRef = useRef(0);
 
   useEffect(() => {
+    let active = true;
+
     const checkUpdates = async () => {
+      const seq = ++pollSeqRef.current;
       const info = await initSession();
-      if (!info) return;
+      if (!active || seq !== pollSeqRef.current || !info || !info.snapshotValid) {
+        return;
+      }
 
       setHasUnreadReply(info.hasUnreadReply);
 
@@ -69,6 +75,7 @@ export function AmbientScene() {
     document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
+      active = false;
       clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
@@ -192,6 +199,7 @@ export function AmbientScene() {
             <button
               type="button"
               onClick={handleOpenMailboxFromAlert}
+              aria-label="Có hồi âm mới — Mở Hộp thư"
               className="flex items-center gap-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 rounded-2xl px-3 py-2.5 text-xs font-medium text-amber-200 shadow-[0_0_15px_rgba(245,158,11,0.25)] cursor-pointer transition-colors"
             >
               <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
