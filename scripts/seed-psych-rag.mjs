@@ -4,8 +4,22 @@
  *
  * Chạy: node scripts/seed-psych-rag.mjs
  */
+import fs from "node:fs";
+import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
-import "dotenv/config";
+
+// Load .env.local or .env without requiring external dotenv package
+for (const envFile of [".env.local", ".env"]) {
+  const fullPath = path.resolve(process.cwd(), envFile);
+  if (fs.existsSync(fullPath)) {
+    for (const line of fs.readFileSync(fullPath, "utf8").split(/\r?\n/)) {
+      const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
+      if (match && match[2] && !process.env[match[1]]) {
+        process.env[match[1]] = match[2].trim();
+      }
+    }
+  }
+}
 
 const KNOWLEDGE_CHUNKS = [
   {

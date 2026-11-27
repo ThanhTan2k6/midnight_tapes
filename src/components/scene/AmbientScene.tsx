@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CloudRain, Volume2, VolumeX, X } from "lucide-react";
+import { CloudRain, Inbox, Volume2, VolumeX, X } from "lucide-react";
 import { useTapeStore } from "@/store/useTapeStore";
 import { soundEngine } from "@/lib/sound-engine";
 import { initSession } from "@/lib/api-client";
@@ -15,20 +15,64 @@ export function AmbientScene() {
     deckOpen,
     rainEnabled,
     rainVolume,
+    hasUnreadReply,
+    setMode,
     setDeckOpen,
     toggleRain,
     setRainVolume,
     setAudioUnlocked,
     setHasUnreadReply,
+    triggerDoorEvent,
   } = useTapeStore();
 
+  const [notificationText, setNotificationText] = useState<string | null>(null);
+  const prevUnreadRef = useRef(false);
+  const prevTeaCountRef = useRef<number | null>(null);
+
   useEffect(() => {
-    void initSession().then((info) => {
-      if (info?.hasUnreadReply) {
-        setHasUnreadReply(true);
+    const checkUpdates = async () => {
+      const info = await initSession();
+      if (!info) return;
+
+      setHasUnreadReply(info.hasUnreadReply);
+
+      if (info.hasUnreadReply && !prevUnreadRef.current) {
+        setNotificationText(
+          "Một người lạ vừa ghé qua và gửi lời ủi an vào Hộp thư của bạn."
+        );
+        triggerDoorEvent();
+      } else if (
+        prevTeaCountRef.current !== null &&
+        info.totalTeaCount > prevTeaCountRef.current
+      ) {
+        setNotificationText(
+          "Có người lạ vừa lắng nghe và gửi tặng bạn một tách trà ấm."
+        );
+        triggerDoorEvent();
       }
-    });
-  }, [setHasUnreadReply]);
+
+      prevUnreadRef.current = info.hasUnreadReply;
+      prevTeaCountRef.current = info.totalTeaCount;
+    };
+
+    void checkUpdates();
+
+    const interval = setInterval(() => {
+      void checkUpdates();
+    }, 25000);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void checkUpdates();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [setHasUnreadReply, triggerDoorEvent]);
 
   useEffect(() => {
     if (rainEnabled) {
@@ -59,6 +103,16 @@ export function AmbientScene() {
     await soundEngine.unlock();
     soundEngine.playToggleSwitch();
     setDeckOpen(false);
+  };
+
+  const handleOpenMailboxFromAlert = async () => {
+    await soundEngine.unlock();
+    setAudioUnlocked(true);
+    soundEngine.playPlayEngage();
+    setNotificationText(null);
+    setHasUnreadReply(false);
+    setMode("MAILBOX");
+    setDeckOpen(true);
   };
 
   const statusText =
@@ -113,7 +167,7 @@ export function AmbientScene() {
       </AnimatePresence>
 
       {/* Top Glassmorphic Status & Rain Ambience Controls */}
-      <header className="relative z-30 w-full max-w-6xl mx-auto px-4 pt-4 pb-2 flex items-center justify-between gap-3 pointer-events-none">
+      <header className="relative z-30 w-full max-w-6xl mx-auto px-4 pt-4 pb-2 flex items-center justify-between gap-2 sm:gap-3 pointer-events-none">
         <div className="pointer-events-auto bg-[#0e1118]/75 backdrop-blur-md border border-amber-400/20 rounded-2xl px-4 py-2.5 shadow-[0_12px_32px_rgba(0,0,0,0.65)] flex items-center gap-3">
           <span
             className={`w-2.5 h-2.5 rounded-full shrink-0 ${
@@ -132,46 +186,97 @@ export function AmbientScene() {
           </div>
         </div>
 
-        {/* Rain Ambience Controls */}
-        <div className="pointer-events-auto flex items-center gap-2.5 bg-[#0e1118]/75 backdrop-blur-md border border-amber-400/20 rounded-2xl px-3.5 py-2.5 shadow-[0_12px_32px_rgba(0,0,0,0.65)] shrink-0">
-          <button
-            type="button"
-            onClick={handleToggleRain}
-            aria-label="Mưa đêm"
-            aria-pressed={rainEnabled}
-            className={`flex items-center gap-1.5 text-xs font-medium transition-colors cursor-pointer ${
-              rainEnabled
-                ? "text-amber-300"
-                : "text-stone-300 hover:text-amber-100"
-            }`}
-          >
-            <CloudRain className="w-4 h-4" />
-            <span className="hidden sm:inline">
-              {rainEnabled ? "Đang phát tiếng mưa" : "Bật tiếng mưa"}
-            </span>
-          </button>
-
-          {rainEnabled && (
-            <div className="flex items-center gap-1.5 pl-2 border-l border-stone-700/80">
-              {rainVolume === 0 ? (
-                <VolumeX className="w-3.5 h-3.5 text-stone-400" />
-              ) : (
-                <Volume2 className="w-3.5 h-3.5 text-amber-300/80" />
-              )}
-              <input
-                type="range"
-                min={0.05}
-                max={1}
-                step={0.05}
-                value={rainVolume}
-                onChange={(e) => setRainVolume(parseFloat(e.target.value))}
-                aria-label="Âm lượng mưa đêm"
-                className="w-16 sm:w-20 accent-amber-400 h-1 bg-stone-700 rounded-lg cursor-pointer"
-              />
-            </div>
+        <div className="flex items-center gap-2 pointer-events-auto shrink-0">
+          {/* Quick Mailbox Notification Pill */}
+          {hasUnreadReply && (
+            <button
+              type="button"
+              onClick={handleOpenMailboxFromAlert}
+              className="flex items-center gap-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 rounded-2xl px-3 py-2.5 text-xs font-medium text-amber-200 shadow-[0_0_15px_rgba(245,158,11,0.25)] cursor-pointer transition-colors"
+            >
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+              <Inbox className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Có hồi âm mới</span>
+            </button>
           )}
+
+          {/* Rain Ambience Controls */}
+          <div className="flex items-center gap-2.5 bg-[#0e1118]/75 backdrop-blur-md border border-amber-400/20 rounded-2xl px-3.5 py-2.5 shadow-[0_12px_32px_rgba(0,0,0,0.65)]">
+            <button
+              type="button"
+              onClick={handleToggleRain}
+              aria-label="Mưa đêm"
+              aria-pressed={rainEnabled}
+              className={`flex items-center gap-1.5 text-xs font-medium transition-colors cursor-pointer ${
+                rainEnabled
+                  ? "text-amber-300"
+                  : "text-stone-300 hover:text-amber-100"
+              }`}
+            >
+              <CloudRain className="w-4 h-4" />
+              <span className="hidden sm:inline">
+                {rainEnabled ? "Đang phát tiếng mưa" : "Bật tiếng mưa"}
+              </span>
+            </button>
+
+            {rainEnabled && (
+              <div className="flex items-center gap-1.5 pl-2 border-l border-stone-700/80">
+                {rainVolume === 0 ? (
+                  <VolumeX className="w-3.5 h-3.5 text-stone-400" />
+                ) : (
+                  <Volume2 className="w-3.5 h-3.5 text-amber-300/80" />
+                )}
+                <input
+                  type="range"
+                  min={0.05}
+                  max={1}
+                  step={0.05}
+                  value={rainVolume}
+                  onChange={(e) => setRainVolume(parseFloat(e.target.value))}
+                  aria-label="Âm lượng mưa đêm"
+                  className="w-16 sm:w-20 accent-amber-400 h-1 bg-stone-700 rounded-lg cursor-pointer"
+                />
+              </div>
+            )}
+          </div>
         </div>
       </header>
+
+      {/* Incoming Reply / Tea Toast Notification Banner */}
+      <AnimatePresence>
+        {notificationText && (
+          <motion.div
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            className="fixed top-20 left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-md bg-[#0e1118]/90 backdrop-blur-md border border-amber-400/40 rounded-2xl px-4 py-3 shadow-[0_15px_35px_rgba(0,0,0,0.75)] flex items-center justify-between gap-3"
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+              <p className="text-xs text-amber-100 leading-snug">
+                {notificationText}
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={handleOpenMailboxFromAlert}
+                className="px-2.5 py-1 rounded-lg bg-amber-500/25 border border-amber-400/45 text-[11px] font-medium text-amber-200 hover:bg-amber-500/35 cursor-pointer"
+              >
+                Mở Hộp thư
+              </button>
+              <button
+                type="button"
+                onClick={() => setNotificationText(null)}
+                aria-label="Đóng thông báo"
+                className="p-1 text-stone-400 hover:text-stone-200 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* MAIN STAGE */}
       <main className="relative z-30 flex-1 flex flex-col items-center justify-center px-3 py-2 pointer-events-none">

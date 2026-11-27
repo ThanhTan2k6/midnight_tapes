@@ -105,6 +105,7 @@ export async function initSession(): Promise<{
   token: string;
   activeTapesCount: number;
   hasUnreadReply: boolean;
+  totalTeaCount: number;
 } | null> {
   try {
     const res = await fetch("/api/v1/session/init", {
@@ -116,6 +117,7 @@ export async function initSession(): Promise<{
       token: string;
       activeTapesCount: number;
       hasUnreadReply: boolean;
+      totalTeaCount: number;
     };
     if (data.token) {
       setStoredToken(data.token);

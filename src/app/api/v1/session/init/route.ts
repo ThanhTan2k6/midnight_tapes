@@ -7,17 +7,19 @@ export async function POST(request: NextRequest) {
 
   let activeTapesCount = 0;
   let hasUnreadReply = false;
+  let totalTeaCount = 0;
 
   try {
     const supabase = getSupabaseAdmin();
     const { data: tapes } = await supabase
       .from("tapes")
-      .select("id, has_reply")
+      .select("id, tea_count")
       .eq("creator_hash", actor.userHash)
       .gt("expires_at", new Date().toISOString());
 
     if (tapes && tapes.length > 0) {
       activeTapesCount = tapes.length;
+      totalTeaCount = tapes.reduce((sum, t) => sum + (t.tea_count ?? 0), 0);
       const tapeIds = tapes.map((t) => t.id);
 
       const { count } = await supabase
@@ -38,6 +40,7 @@ export async function POST(request: NextRequest) {
     token: actor.token,
     activeTapesCount,
     hasUnreadReply,
+    totalTeaCount,
   });
 
   return attachSessionCookie(res, actor.token);
