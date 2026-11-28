@@ -278,7 +278,15 @@ export function AmbientScene() {
       </AnimatePresence>
 
       {/* Top Glassmorphic Status, Live Counter & Rain Controls */}
-      <header className="relative z-30 w-full max-w-6xl mx-auto px-4 pt-4 pb-2 flex flex-wrap items-center justify-between gap-2 sm:gap-3 pointer-events-none">
+      <AnimatePresence>
+        {!deckOpen && (
+          <motion.header
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.2 }}
+            className="relative z-30 w-full max-w-6xl mx-auto px-4 pt-4 pb-2 flex flex-wrap items-center justify-between gap-2 sm:gap-3 pointer-events-none"
+          >
         <div className="flex flex-wrap items-center gap-2 pointer-events-auto">
           <div className="bg-[#0e1118]/75 backdrop-blur-md border border-amber-400/20 rounded-2xl px-4 py-2.5 shadow-[0_12px_32px_rgba(0,0,0,0.65)] flex items-center gap-3">
             <span
@@ -388,7 +396,9 @@ export function AmbientScene() {
             <Info className="w-4 h-4" />
           </button>
         </div>
-      </header>
+          </motion.header>
+        )}
+      </AnimatePresence>
 
       {/* Incoming Visitor / Reply / Tea Toast Notification Banner */}
       <AnimatePresence>
