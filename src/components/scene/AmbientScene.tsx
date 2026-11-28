@@ -7,6 +7,7 @@ import {
   Disc3,
   Inbox,
   Info,
+  Mic,
   Users,
   Volume2,
   VolumeX,
@@ -243,6 +244,28 @@ export function AmbientScene() {
     setMode("LISTEN");
     setDeckOpen(true);
   };
+
+  const handleOpenDeckMode = async (targetMode: "RECORD" | "LISTEN") => {
+    await soundEngine.unlock();
+    setAudioUnlocked(true);
+    soundEngine.playPlayEngage();
+    setMode(targetMode);
+    setDeckOpen(true);
+  };
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (infoOpen) {
+        setInfoOpen(false);
+      } else if (deckOpen) {
+        soundEngine.playToggleSwitch();
+        setDeckOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [infoOpen, deckOpen, setDeckOpen]);
 
   const statusText =
     status === "RECORDING"
@@ -484,21 +507,24 @@ export function AmbientScene() {
           )}
         </AnimatePresence>
 
-        {/* Mobile Entrance Prompt when viewing outside rainy cafe scene */}
+        {/* Dual Primary CTAs at bottom when viewing outside rainy cafe scene */}
         {!deckOpen && (
-          <div className="flex md:hidden fixed bottom-6 inset-x-0 justify-center px-4 pointer-events-auto">
+          <div className="fixed bottom-5 sm:bottom-7 inset-x-0 flex items-center justify-center gap-2.5 sm:gap-3 px-4 pointer-events-auto">
             <button
               type="button"
-              onClick={async () => {
-                await soundEngine.unlock();
-                setAudioUnlocked(true);
-                soundEngine.playPlayEngage();
-                setDeckOpen(true);
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#0e1118]/85 border border-amber-400/40 text-xs font-medium text-amber-200 shadow-[0_12px_32px_rgba(0,0,0,0.75)] backdrop-blur-md cursor-pointer active:scale-95 transition-transform"
+              onClick={() => void handleOpenDeckMode("RECORD")}
+              className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-full bg-amber-500/90 hover:bg-amber-400 text-stone-950 text-xs sm:text-sm font-semibold shadow-[0_12px_32px_rgba(245,158,11,0.35)] cursor-pointer active:scale-95 transition-all"
+            >
+              <Mic className="w-4 h-4" />
+              <span>Thu cuộn băng mới</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleOpenDeckMode("LISTEN")}
+              className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-full bg-[#0e1118]/85 hover:bg-[#171c27]/95 border border-amber-400/40 text-amber-200 text-xs sm:text-sm font-medium shadow-[0_12px_32px_rgba(0,0,0,0.75)] backdrop-blur-md cursor-pointer active:scale-95 transition-all"
             >
               <Disc3 className="w-4 h-4 text-amber-400" />
-              <span>Mở máy Cassette trên quầy</span>
+              <span>Nhặt băng nghe thử</span>
             </button>
           </div>
         )}
