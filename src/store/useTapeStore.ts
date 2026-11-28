@@ -67,7 +67,7 @@ export const useTapeStore = create<TapeState>((set, get) => ({
   lightningEventCount: 0,
   hasUnreadReply: false,
   audioUnlocked: false,
-  rainEnabled: false,
+  rainEnabled: true,
   rainVolume: 0.45,
   teaSteaming: true,
 

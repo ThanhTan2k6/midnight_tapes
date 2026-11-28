@@ -82,12 +82,37 @@ export function AmbientScene() {
   }, [setHasUnreadReply, triggerDoorEvent]);
 
   useEffect(() => {
+    let cleanupGestureListener: (() => void) | null = null;
+
     if (rainEnabled) {
-      soundEngine.startRain(rainVolume);
+      soundEngine.startRain(rainVolume, () => {
+        // Browser blocked unmuted autoplay before first user gesture:
+        // start rain automatically on the very first click/tap/keydown anywhere.
+        const resumeOnGesture = () => {
+          cleanupGestureListener?.();
+          cleanupGestureListener = null;
+          if (useTapeStore.getState().rainEnabled) {
+            void soundEngine.unlock();
+            setAudioUnlocked(true);
+            soundEngine.startRain(useTapeStore.getState().rainVolume);
+          }
+        };
+
+        window.addEventListener("pointerdown", resumeOnGesture, { once: true });
+        window.addEventListener("keydown", resumeOnGesture, { once: true });
+        cleanupGestureListener = () => {
+          window.removeEventListener("pointerdown", resumeOnGesture);
+          window.removeEventListener("keydown", resumeOnGesture);
+        };
+      });
     } else {
       soundEngine.stopRain();
     }
-  }, [rainEnabled, rainVolume]);
+
+    return () => {
+      cleanupGestureListener?.();
+    };
+  }, [rainEnabled, rainVolume, setAudioUnlocked]);
 
   useEffect(() => {
     soundEngine.setRainVolume(rainVolume);

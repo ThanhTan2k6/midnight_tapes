@@ -129,7 +129,7 @@ class MidnightSoundEngine {
   // LAYER 1: MƯA ĐÊM (FILE MP3 THẬT) & TAPE HISS NHẸ
   // =========================================================================
 
-  public startRain(volume = 0.45): void {
+  public startRain(volume = 0.45, onAutoplayBlocked?: () => void): void {
     if (typeof window === "undefined" || this.rainActive) return;
 
     if (!this.rainAudio) {
@@ -153,6 +153,7 @@ class MidnightSoundEngine {
         this.rainFadeTimer = null;
       }
       this.rainActive = false;
+      onAutoplayBlocked?.();
     });
 
     this.rainFadeTimer = setInterval(() => {
