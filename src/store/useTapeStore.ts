@@ -50,6 +50,7 @@ export interface TapeState {
   triggerLightningEvent: () => void;
   toggleRain: () => void;
   setRainVolume: (volume: number) => void;
+  setActiveListenDuration: (duration: number) => void;
   triggerTeaSteam: () => void;
   resetTape: () => void;
 }
@@ -138,6 +139,9 @@ export const useTapeStore = create<TapeState>((set, get) => ({
 
   setRainVolume: (rainVolume) =>
     set({ rainVolume: Math.max(0, Math.min(1, rainVolume)) }),
+
+  setActiveListenDuration: (activeListenDuration) =>
+    set({ activeListenDuration }),
 
   triggerTeaSteam: () => set({ teaSteaming: true }),
 

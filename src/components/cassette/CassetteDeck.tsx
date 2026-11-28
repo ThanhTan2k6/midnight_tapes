@@ -68,6 +68,7 @@ export function CassetteDeck() {
     toggleVoiceMask,
     setAudioUnlocked,
     setHasUnreadReply,
+    setActiveListenDuration,
     triggerDoorEvent,
     resetTape,
   } = useTapeStore();
@@ -313,6 +314,7 @@ export function CassetteDeck() {
       try {
         const tape = await pickRandomTape(listenFilter);
         setPickedTape(tape);
+        setActiveListenDuration(tape.durationSeconds);
         resetTape();
         triggerDoorEvent();
         showToast(`Đã nhặt cuộn băng #${tape.tagDisplayName}. Bấm PLAY để nghe.`);
