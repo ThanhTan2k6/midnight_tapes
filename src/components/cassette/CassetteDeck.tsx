@@ -13,7 +13,6 @@ import {
   Pause,
   Play,
   Send,
-  Square,
 } from "lucide-react";
 import { useTapeStore } from "@/store/useTapeStore";
 import { soundEngine } from "@/lib/sound-engine";
@@ -183,9 +182,14 @@ export function CassetteDeck() {
       soundEngine.playRecClick();
       clearMicError();
 
-      if (status === "PAUSED_REC") {
-        resumeRecording();
-        setStatus("RECORDING");
+      if (status === "RECORDING" || status === "PAUSED_REC") {
+        stopRecording();
+        setElapsedSeconds(0);
+        if (isReplying) {
+          setStatus(replyRecordedDuration > 0 ? "RECORDED" : "IDLE");
+        } else {
+          setStatus(recordedDuration > 0 ? "RECORDED" : "IDLE");
+        }
         return;
       }
 
@@ -209,6 +213,9 @@ export function CassetteDeck() {
       if (status === "RECORDING") {
         pauseRecording();
         setStatus("PAUSED_REC");
+      } else if (status === "PAUSED_REC") {
+        resumeRecording();
+        setStatus("RECORDING");
       } else if (status === "PLAYING") {
         if (mode === "RECORD" || isReplying) {
           pausePlayback();
@@ -225,7 +232,7 @@ export function CassetteDeck() {
 
       if (mode === "RECORD" || isReplying) {
         if (status === "RECORDING" || status === "PAUSED_REC") {
-          showToast("Hãy bấm STOP trước khi nghe lại cuộn băng nhé.");
+          showToast("Hãy bấm lại nút DỪNG (REC) trước khi nghe lại nhé.");
           return;
         }
         if (!recording?.url) {
@@ -267,33 +274,6 @@ export function CassetteDeck() {
         setStatus("PLAYING");
       } catch {
         showToast("Không thể phát cuộn băng này lúc này.");
-      }
-    });
-
-  const handleStop = () =>
-    unlockAndRun(() => {
-      soundEngine.playPauseStop();
-      if (status === "RECORDING" || status === "PAUSED_REC") {
-        stopRecording();
-        setElapsedSeconds(0);
-        if (isReplying) {
-          setStatus(replyRecordedDuration > 0 ? "RECORDED" : "IDLE");
-        } else {
-          setStatus(recordedDuration > 0 ? "RECORDED" : "IDLE");
-        }
-      } else if (status === "PLAYING" || status === "PAUSED_PLAY") {
-        if (mode === "RECORD" || isReplying) {
-          stopPlayback();
-        } else {
-          stopRemoteAudio();
-        }
-        setElapsedSeconds(0);
-        setStatus(
-          (mode === "RECORD" && recordedDuration > 0) ||
-            (isReplying && replyRecordedDuration > 0)
-            ? "RECORDED"
-            : "IDLE"
-        );
       }
     });
 
@@ -721,7 +701,11 @@ export function CassetteDeck() {
             {(mode === "RECORD" || isReplying) && (
               <MechanicalButton
                 variant="rec"
-                label="REC"
+                label={
+                  status === "RECORDING" || status === "PAUSED_REC"
+                    ? "DỪNG"
+                    : "REC"
+                }
                 disabled={isSubmitting}
                 active={status === "RECORDING"}
                 onClick={handleRec}
@@ -747,20 +731,18 @@ export function CassetteDeck() {
             <MechanicalButton
               label="PAUSE"
               active={status === "PAUSED_REC" || status === "PAUSED_PLAY"}
-              disabled={status !== "RECORDING" && status !== "PLAYING"}
+              disabled={
+                status !== "RECORDING" &&
+                status !== "PAUSED_REC" &&
+                status !== "PLAYING"
+              }
               onClick={handlePause}
               icon={<Pause className="w-4 h-4 fill-current" />}
             />
 
             <MechanicalButton
-              label="STOP"
-              onClick={handleStop}
-              icon={<Square className="w-3.5 h-3.5 fill-current" />}
-            />
-
-            <MechanicalButton
               variant="eject"
-              label="EJECT"
+              label={mode === "LISTEN" && !isReplying ? "ĐỔI BĂNG" : "EJECT"}
               onClick={handleEject}
               icon={<Eject className="w-4 h-4" />}
             />
