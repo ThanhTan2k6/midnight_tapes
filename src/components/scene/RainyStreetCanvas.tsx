@@ -264,51 +264,6 @@ export function RainyStreetCanvas() {
       }
     };
 
-    const drawMobileRainOnly = (dt: number) => {
-      const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
-      bgGrad.addColorStop(0, "#070a12");
-      bgGrad.addColorStop(0.55, "#111520");
-      bgGrad.addColorStop(1, "#090b10");
-      ctx.fillStyle = bgGrad;
-      ctx.fillRect(0, 0, W, H);
-
-      const mult = useTapeStore.getState().rainEnabled ? 1.35 : 0.7;
-      ctx.strokeStyle = "rgba(186, 230, 253, 0.24)";
-      ctx.lineWidth = 1;
-      for (const r of raindrops) {
-        r.x -= r.speed * 0.16 * dt;
-        r.y += r.speed * dt;
-        if (r.y > H) {
-          r.y = -20;
-          r.x = Math.random() * (W + 80);
-        }
-        ctx.globalAlpha = r.alpha * mult;
-        ctx.beginPath();
-        ctx.moveTo(r.x, r.y);
-        ctx.lineTo(r.x - r.len * 0.16, r.y + r.len);
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
-
-      for (const d of glassDrops) {
-        d.y += d.speed * dt;
-        if (d.y > H) {
-          d.y = -d.trail;
-          d.x = Math.random() * W;
-        }
-        ctx.strokeStyle = "rgba(224, 242, 254, 0.14)";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(d.x, d.y);
-        ctx.lineTo(d.x, Math.max(0, d.y - d.trail));
-        ctx.stroke();
-
-        ctx.fillStyle = "rgba(224, 242, 254, 0.24)";
-        ctx.beginPath();
-        ctx.ellipse(d.x, d.y, d.r * 0.75, d.r * 1.8, 0, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    };
 
     const drawDesktopScene = (dt: number) => {
       const horizonY = H * 0.58;
@@ -695,7 +650,9 @@ export function RainyStreetCanvas() {
       ctx.fillRect(0, 0, W, counterTopY);
 
       // G. STYLIZED MINIMALIST CHARACTER AT BAR COUNTER
-      const charX = Math.max(doorHitbox.x + doorHitbox.w + 75, W * 0.34);
+      const charX = isMobile
+        ? Math.max(doorHitbox.x + doorHitbox.w + 40, W * 0.36)
+        : Math.max(doorHitbox.x + doorHitbox.w + 75, W * 0.34);
       const charBaseY = counterTopY + 55;
       const breathe = prefersReducedMotion ? 0 : Math.sin(state.time * 2.1) * 2.2;
 
@@ -741,7 +698,9 @@ export function RainyStreetCanvas() {
       // I. CASSETTE DECK & GLASS OF WATER ON COUNTER
       const deckW = 112;
       const deckH = 58;
-      const deckX = charX + 78;
+      const deckX = isMobile
+        ? Math.min(charX + 64, W - deckW - 14)
+        : charX + 78;
       const deckY = counterTopY - deckH + 4;
       cassetteHitbox = {
         x: deckX - 16,
@@ -908,17 +867,12 @@ export function RainyStreetCanvas() {
       }
 
       ctx.clearRect(0, 0, W, H);
-      if (isMobile) {
-        drawMobileRainOnly(dt);
-      } else {
-        drawDesktopScene(dt);
-      }
+      drawDesktopScene(dt);
 
       animId = requestAnimationFrame(animate);
     };
 
     const handleCanvasClick = async (e: MouseEvent) => {
-      if (isMobile) return;
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
@@ -949,10 +903,6 @@ export function RainyStreetCanvas() {
     };
 
     const handleCanvasMove = (e: MouseEvent) => {
-      if (isMobile) {
-        canvas.style.cursor = "default";
-        return;
-      }
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
