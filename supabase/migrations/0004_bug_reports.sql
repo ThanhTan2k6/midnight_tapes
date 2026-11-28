@@ -12,4 +12,6 @@ CREATE TABLE IF NOT EXISTS public.bug_reports (
 
 ALTER TABLE public.bug_reports ENABLE ROW LEVEL SECURITY;
 
+GRANT ALL ON TABLE public.bug_reports TO service_role;
+
 NOTIFY pgrst, 'reload schema';
