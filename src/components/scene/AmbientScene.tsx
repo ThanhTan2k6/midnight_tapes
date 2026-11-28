@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+  Bug,
   CloudRain,
   Disc3,
   Inbox,
   Info,
   Mic,
+  Send,
   Users,
   Volume2,
   VolumeX,
@@ -40,6 +42,17 @@ export function AmbientScene() {
   const [onlineCount, setOnlineCount] = useState(1);
   const [activeTapesCount, setActiveTapesCount] = useState(0);
   const [infoOpen, setInfoOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportCategory, setReportCategory] = useState<
+    "BUG_AUDIO_UI" | "BUG_RECORD_PLAY" | "SUGGESTION"
+  >("BUG_AUDIO_UI");
+  const [reportMessage, setReportMessage] = useState("");
+  const [reportContact, setReportContact] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportStatus, setReportStatus] = useState<{
+    type: "ok" | "err";
+    text: string;
+  } | null>(null);
 
   const prevUnreadRef = useRef(false);
   const prevTeaCountRef = useRef<number | null>(null);
@@ -253,10 +266,58 @@ export function AmbientScene() {
     setDeckOpen(true);
   };
 
+  const handleSubmitReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = reportMessage.trim();
+    if (trimmed.length < 5) {
+      setReportStatus({
+        type: "err",
+        text: "Vui lòng mô tả ngắn gọn (tối thiểu 5 ký tự).",
+      });
+      return;
+    }
+    setReportSubmitting(true);
+    setReportStatus(null);
+    try {
+      const res = await fetch("/api/v1/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: reportCategory,
+          message: trimmed,
+          contact: reportContact.trim(),
+        }),
+      });
+      const json = (await res.json()) as { message?: string; error?: string };
+      if (!res.ok) {
+        setReportStatus({
+          type: "err",
+          text: json.error || "Không thể gửi phản hồi lúc này.",
+        });
+      } else {
+        setReportStatus({
+          type: "ok",
+          text: json.message || "Đã gửi phản hồi thành công!",
+        });
+        setReportMessage("");
+        setReportContact("");
+      }
+    } catch {
+      setReportStatus({
+        type: "err",
+        text: "Mất kết nối máy chủ, bạn thử lại sau nhé.",
+      });
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (infoOpen) {
+      if (reportOpen) {
+        setReportOpen(false);
+      } else if (infoOpen) {
         setInfoOpen(false);
       } else if (deckOpen) {
         soundEngine.playToggleSwitch();
@@ -265,7 +326,7 @@ export function AmbientScene() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [infoOpen, deckOpen, setDeckOpen]);
+  }, [reportOpen, infoOpen, deckOpen, setDeckOpen]);
 
   const statusText =
     status === "RECORDING"
@@ -435,6 +496,20 @@ export function AmbientScene() {
             className="bg-[#0e1118]/75 hover:bg-[#151a24]/85 backdrop-blur-md border border-amber-400/20 hover:border-amber-400/45 rounded-2xl p-2.5 shadow-[0_12px_32px_rgba(0,0,0,0.65)] text-stone-300 hover:text-amber-200 transition-colors cursor-pointer"
           >
             <Info className="w-4 h-4" />
+          </button>
+
+          {/* Bug Report & Feedback Button */}
+          <button
+            type="button"
+            onClick={() => {
+              setReportStatus(null);
+              setReportOpen(true);
+            }}
+            aria-label="Báo lỗi hoặc góp ý"
+            title="Báo lỗi / Góp ý"
+            className="bg-[#0e1118]/75 hover:bg-[#151a24]/85 backdrop-blur-md border border-amber-400/20 hover:border-amber-400/45 rounded-2xl p-2.5 shadow-[0_12px_32px_rgba(0,0,0,0.65)] text-stone-300 hover:text-amber-200 transition-colors cursor-pointer"
+          >
+            <Bug className="w-4 h-4" />
           </button>
         </div>
           </motion.header>
@@ -617,6 +692,128 @@ export function AmbientScene() {
                   © {new Date().getFullYear()} Tiệm Băng Nửa Đêm • Nội dung âm thanh thuộc về người gửi ẩn danh và tự hủy sau 24h.
                 </p>
               </section>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bug Report / Feedback Modal */}
+      <AnimatePresence>
+        {reportOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setReportOpen(false)}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md rounded-2xl bg-[#10131b]/95 border border-amber-400/25 p-5 text-stone-200 shadow-[0_24px_60px_rgba(0,0,0,0.85)] flex flex-col gap-3.5"
+            >
+              <div className="flex items-center justify-between gap-3 border-b border-stone-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <Bug className="w-4 h-4 text-amber-400" />
+                  <div>
+                    <h2 className="text-sm font-semibold tracking-wide text-amber-200">
+                      BÁO LỖI &amp; GÓP Ý
+                    </h2>
+                    <p className="text-[11px] text-stone-400">
+                      Giúp Chủ tiệm vá lỗi nhanh hơn
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setReportOpen(false)}
+                  aria-label="Đóng khung báo lỗi"
+                  className="p-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-stone-400 hover:text-stone-200 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmitReport} className="flex flex-col gap-3">
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { id: "BUG_AUDIO_UI", label: "Lỗi giao diện / Âm thanh" },
+                    { id: "BUG_RECORD_PLAY", label: "Lỗi thu âm / Phát băng" },
+                    { id: "SUGGESTION", label: "Góp ý tính năng" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() =>
+                        setReportCategory(
+                          opt.id as
+                            | "BUG_AUDIO_UI"
+                            | "BUG_RECORD_PLAY"
+                            | "SUGGESTION"
+                        )
+                      }
+                      className={`px-2.5 py-1 rounded-lg text-[11px] border cursor-pointer transition-colors ${
+                        reportCategory === opt.id
+                          ? "bg-amber-500/20 border-amber-400/60 text-amber-200"
+                          : "bg-stone-900/80 border-stone-800 text-stone-400 hover:text-stone-200"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+
+                <textarea
+                  rows={4}
+                  maxLength={600}
+                  value={reportMessage}
+                  onChange={(e) => setReportMessage(e.target.value)}
+                  placeholder="Mô tả lỗi bạn gặp (trên điện thoại/máy tính nào, bấm vào đâu bị lỗi...) hoặc góp ý cho Tiệm..."
+                  className="w-full rounded-xl bg-stone-950/90 border border-stone-800 focus:border-amber-400/50 focus:outline-none p-3 text-xs text-stone-200 placeholder:text-stone-500 resize-none"
+                />
+
+                <input
+                  type="text"
+                  maxLength={120}
+                  value={reportContact}
+                  onChange={(e) => setReportContact(e.target.value)}
+                  placeholder="Liên hệ lại (không bắt buộc: FB, Threads, Email...)"
+                  className="w-full rounded-xl bg-stone-950/90 border border-stone-800 focus:border-amber-400/50 focus:outline-none px-3 py-2 text-xs text-stone-200 placeholder:text-stone-500"
+                />
+
+                {reportStatus && (
+                  <p
+                    className={`text-xs rounded-lg px-3 py-2 border ${
+                      reportStatus.type === "ok"
+                        ? "bg-emerald-950/50 border-emerald-700/50 text-emerald-300"
+                        : "bg-red-950/50 border-red-700/50 text-red-300"
+                    }`}
+                  >
+                    {reportStatus.text}
+                  </p>
+                )}
+
+                <div className="flex justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setReportOpen(false)}
+                    className="px-3.5 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 text-xs text-stone-300 cursor-pointer"
+                  >
+                    Đóng
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={reportSubmitting || reportMessage.trim().length < 5}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 text-xs font-semibold disabled:opacity-40 cursor-pointer"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>{reportSubmitting ? "Đang gửi..." : "Gửi phản hồi"}</span>
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </motion.div>
         )}
