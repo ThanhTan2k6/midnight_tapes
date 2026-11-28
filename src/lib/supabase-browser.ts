@@ -1,0 +1,26 @@
+"use client";
+
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+
+let browserClient: SupabaseClient | null = null;
+
+/**
+ * Supabase Browser Client chỉ dùng cho Realtime Presence (đếm người đang trong tiệm & tiếng chuông cửa).
+ * Không dùng để truy vấn trực tiếp các bảng bị khóa RLS.
+ */
+export function getSupabaseBrowser(): SupabaseClient | null {
+  if (typeof window === "undefined") return null;
+  if (browserClient) return browserClient;
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) return null;
+
+  browserClient = createClient(url, anonKey, {
+    realtime: {
+      params: { eventsPerSecond: 5 },
+    },
+  });
+
+  return browserClient;
+}

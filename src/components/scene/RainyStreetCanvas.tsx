@@ -243,9 +243,7 @@ export function RainyStreetCanvas() {
       if (state.doorTimer > 0.5) return;
       state.doorTimer = 5.2;
       state.guestXOffset = -36;
-      if (useTapeStore.getState().audioUnlocked) {
-        soundEngine.playDoorBell();
-      }
+      soundEngine.playDoorBell();
     };
 
     const startLightningBolt = () => {

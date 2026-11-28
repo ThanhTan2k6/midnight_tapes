@@ -2,10 +2,19 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CloudRain, Inbox, Volume2, VolumeX, X } from "lucide-react";
+import {
+  CloudRain,
+  Disc3,
+  Inbox,
+  Users,
+  Volume2,
+  VolumeX,
+  X,
+} from "lucide-react";
 import { useTapeStore } from "@/store/useTapeStore";
 import { soundEngine } from "@/lib/sound-engine";
 import { initSession } from "@/lib/api-client";
+import { getSupabaseBrowser } from "@/lib/supabase-browser";
 import { RainyStreetCanvas } from "./RainyStreetCanvas";
 import { CassetteDeck } from "@/components/cassette/CassetteDeck";
 
@@ -26,19 +35,80 @@ export function AmbientScene() {
   } = useTapeStore();
 
   const [notificationText, setNotificationText] = useState<string | null>(null);
+  const [onlineCount, setOnlineCount] = useState(1);
+  const [activeTapesCount, setActiveTapesCount] = useState(0);
+
   const prevUnreadRef = useRef(false);
   const prevTeaCountRef = useRef<number | null>(null);
   const pollSeqRef = useRef(0);
 
+  // 1. Supabase Realtime Presence: detect real visitors entering in another tab/device
+  useEffect(() => {
+    const supabase = getSupabaseBrowser();
+    if (!supabase) return;
+
+    const myKey =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `guest-${Math.random().toString(36).slice(2)}`;
+
+    let initialSynced = false;
+    const channel = supabase.channel("midnight-cafe-room", {
+      config: { presence: { key: myKey } },
+    });
+
+    channel
+      .on("presence", { event: "sync" }, () => {
+        const state = channel.presenceState();
+        const count = Math.max(1, Object.keys(state).length);
+        setOnlineCount(count);
+        initialSynced = true;
+      })
+      .on("presence", { event: "join" }, ({ key }) => {
+        if (!initialSynced || key === myKey) return;
+        triggerDoorEvent();
+        soundEngine.playDoorBell();
+        setNotificationText("Có người lạ vừa đẩy cửa kính bước vào tiệm...");
+        setTimeout(() => {
+          setNotificationText((prev) =>
+            prev === "Có người lạ vừa đẩy cửa kính bước vào tiệm..."
+              ? null
+              : prev
+          );
+        }, 4200);
+      })
+      .subscribe(async (subStatus) => {
+        if (subStatus === "SUBSCRIBED") {
+          await channel.track({ joinedAt: new Date().toISOString() });
+        }
+      });
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [triggerDoorEvent]);
+
+  // 2. Poll mailbox + live active tapes stats every 25s & on tab focus
   useEffect(() => {
     let active = true;
 
     const checkUpdates = async () => {
       const seq = ++pollSeqRef.current;
-      const info = await initSession();
-      if (!active || seq !== pollSeqRef.current || !info || !info.snapshotValid) {
-        return;
+
+      const [info, statsRes] = await Promise.all([
+        initSession(),
+        fetch("/api/v1/stats", { cache: "no-store" })
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null),
+      ]);
+
+      if (!active || seq !== pollSeqRef.current) return;
+
+      if (statsRes && typeof statsRes.activeTapes === "number") {
+        setActiveTapesCount(statsRes.activeTapes);
       }
+
+      if (!info || !info.snapshotValid) return;
 
       setHasUnreadReply(info.hasUnreadReply);
 
@@ -81,13 +151,12 @@ export function AmbientScene() {
     };
   }, [setHasUnreadReply, triggerDoorEvent]);
 
+  // 3. Midnight Rain Ambience (Auto-start + unlock on first user gesture)
   useEffect(() => {
     let cleanupGestureListener: (() => void) | null = null;
 
     if (rainEnabled) {
       soundEngine.startRain(rainVolume, () => {
-        // Browser blocked unmuted autoplay before first user gesture:
-        // start rain automatically on the very first click/tap/keydown anywhere.
         const resumeOnGesture = () => {
           cleanupGestureListener?.();
           cleanupGestureListener = null;
@@ -147,6 +216,14 @@ export function AmbientScene() {
     setDeckOpen(true);
   };
 
+  const handleOpenListenFromStats = async () => {
+    await soundEngine.unlock();
+    setAudioUnlocked(true);
+    soundEngine.playPlayEngage();
+    setMode("LISTEN");
+    setDeckOpen(true);
+  };
+
   const statusText =
     status === "RECORDING"
       ? "Đang thu âm câu chuyện vào cuộn băng..."
@@ -198,24 +275,49 @@ export function AmbientScene() {
         )}
       </AnimatePresence>
 
-      {/* Top Glassmorphic Status & Rain Ambience Controls */}
-      <header className="relative z-30 w-full max-w-6xl mx-auto px-4 pt-4 pb-2 flex items-center justify-between gap-2 sm:gap-3 pointer-events-none">
-        <div className="pointer-events-auto bg-[#0e1118]/75 backdrop-blur-md border border-amber-400/20 rounded-2xl px-4 py-2.5 shadow-[0_12px_32px_rgba(0,0,0,0.65)] flex items-center gap-3">
-          <span
-            className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-              status === "RECORDING"
-                ? "bg-red-500 shadow-[0_0_12px_#ef4444] animate-pulse"
-                : "bg-amber-400 shadow-[0_0_10px_#fbbf24]"
-            }`}
-          />
-          <div>
-            <h1 className="text-xs sm:text-sm font-semibold tracking-wide text-amber-100">
-              TIỆM BĂNG NỬA ĐÊM
-            </h1>
-            <p className="text-[11px] text-stone-400 hidden sm:block">
-              {statusText}
-            </p>
+      {/* Top Glassmorphic Status, Live Counter & Rain Controls */}
+      <header className="relative z-30 w-full max-w-6xl mx-auto px-4 pt-4 pb-2 flex flex-wrap items-center justify-between gap-2 sm:gap-3 pointer-events-none">
+        <div className="flex flex-wrap items-center gap-2 pointer-events-auto">
+          <div className="bg-[#0e1118]/75 backdrop-blur-md border border-amber-400/20 rounded-2xl px-4 py-2.5 shadow-[0_12px_32px_rgba(0,0,0,0.65)] flex items-center gap-3">
+            <span
+              className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                status === "RECORDING"
+                  ? "bg-red-500 shadow-[0_0_12px_#ef4444] animate-pulse"
+                  : "bg-amber-400 shadow-[0_0_10px_#fbbf24]"
+              }`}
+            />
+            <div>
+              <h1 className="text-xs sm:text-sm font-semibold tracking-wide text-amber-100">
+                TIỆM BĂNG NỬA ĐÊM
+              </h1>
+              <p className="text-[11px] text-stone-400 hidden sm:block">
+                {statusText}
+              </p>
+            </div>
           </div>
+
+          {/* Live Presence & Active Tapes Counter Pill */}
+          <button
+            type="button"
+            onClick={handleOpenListenFromStats}
+            aria-label="Thống kê người đang trong tiệm và số cuộn băng đang trôi"
+            className="bg-[#0e1118]/75 hover:bg-[#151a24]/85 backdrop-blur-md border border-amber-400/20 hover:border-amber-400/45 rounded-2xl px-3.5 py-2.5 shadow-[0_12px_32px_rgba(0,0,0,0.65)] flex items-center gap-3 text-xs text-stone-300 cursor-pointer transition-colors"
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
+              <Users className="w-3.5 h-3.5 text-emerald-300" />
+              <span>
+                <strong>{onlineCount}</strong> đang trong tiệm
+              </span>
+            </span>
+            <span className="text-stone-600">•</span>
+            <span className="inline-flex items-center gap-1.5 text-amber-200">
+              <Disc3 className="w-3.5 h-3.5 text-amber-400" />
+              <span>
+                <strong>{activeTapesCount}</strong> cuộn băng đang trôi
+              </span>
+            </span>
+          </button>
         </div>
 
         <div className="flex items-center gap-2 pointer-events-auto shrink-0">
@@ -275,7 +377,7 @@ export function AmbientScene() {
         </div>
       </header>
 
-      {/* Incoming Reply / Tea Toast Notification Banner */}
+      {/* Incoming Visitor / Reply / Tea Toast Notification Banner */}
       <AnimatePresence>
         {notificationText && (
           <motion.div
@@ -291,13 +393,16 @@ export function AmbientScene() {
               </p>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={handleOpenMailboxFromAlert}
-                className="px-2.5 py-1 rounded-lg bg-amber-500/25 border border-amber-400/45 text-[11px] font-medium text-amber-200 hover:bg-amber-500/35 cursor-pointer"
-              >
-                Mở Hộp thư
-              </button>
+              {notificationText.includes("Hộp thư") ||
+              notificationText.includes("tách trà") ? (
+                <button
+                  type="button"
+                  onClick={handleOpenMailboxFromAlert}
+                  className="px-2.5 py-1 rounded-lg bg-amber-500/25 border border-amber-400/45 text-[11px] font-medium text-amber-200 hover:bg-amber-500/35 cursor-pointer"
+                >
+                  Mở Hộp thư
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => setNotificationText(null)}
