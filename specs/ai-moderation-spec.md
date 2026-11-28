@@ -34,7 +34,7 @@ Vì "Tiệm Băng Nửa Đêm" là một không gian giải tỏa cảm xúc ho�
    - Quét URL / @username                              │
            │                                           │
            ▼                                           ▼
- [GEMINI 2.5 FLASH SAFETY EVALUATOR] ◄─────────────────┘
+ [GEMINI 3.8 FLASH SAFETY EVALUATOR] ◄─────────────────┘
    - Phân tích ngữ cảnh, PII, độ độc hại & Mức độ tổn thương tâm lý
            │
            ├──────────────────────┬──────────────────────────┐
@@ -51,7 +51,7 @@ Vì "Tiệm Băng Nửa Đêm" là một không gian giải tỏa cảm xúc ho�
 
 ---
 
-## 3. PROMPT ĐÁNH GIÁ CỦA GEMINI 2.5 FLASH
+## 3. PROMPT ĐÁNH GIÁ CỦA GEMINI 3.8 FLASH
 
 ```markdown
 Bạn là Người Gác Đêm mẫn cán tại "Tiệm Băng Nửa Đêm" — một không gian an toàn, ấm áp để mọi người tâm sự ẩn danh.
@@ -87,7 +87,7 @@ Khi `verdict` là `HEAVY_DISTRESS` (nội dung nặng nề, kiệt sức tinh th
 1. **Vector Retrieval (`pgvector`):**
    - Tạo embedding từ tóm tắt tâm trạng & `distressKeywords` bằng model **`gemini-embedding-001`** (`outputDimensionality: 768` khớp với `VECTOR(768)`).
    - Truy vấn Top-3 tài liệu từ bảng `psych_knowledge_chunks` (chứa các bài hướng dẫn Sơ cứu tâm lý - PFA, kỹ thuật tiếp đất 5-4-3-2-1, nhịp thở 4-7-8, tái cấu trúc nhận thức CBT cơ bản đã được chuyên gia tâm lý Việt Nam thẩm định; cùng sử dụng `gemini-embedding-001` khi ingest).
-2. **Grounded Synthesis (`gemini-2.5-flash`):**
+2. **Grounded Synthesis (`gemini-3.8-flash`):**
    - Tổng hợp thành một **"Lá thư ủi an từ Gác Đêm"** dài khoảng 120–180 chữ.
    - **Ràng buộc an toàn y khoa (Clinical Guardrails):**
      - Không tự xưng là bác sĩ hay chuyên gia trị liệu.

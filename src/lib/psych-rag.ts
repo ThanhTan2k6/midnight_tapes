@@ -137,7 +137,7 @@ RÀNG BUỘC AN TOÀN BẮT BUỘC:
 - Phản chiếu sự lắng nghe dịu dàng, gợi ý nhẹ bài tập điều hòa cơ thể trong ngữ cảnh trên${params.severity === "CRISIS" ? " và nhấn mạnh họ không đơn độc, hãy gọi ngay tổng đài hỗ trợ bên dưới" : ""}.`;
 
       const res = await fetch(
-        `${GEMINI_API_BASE}/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        `${GEMINI_API_BASE}/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

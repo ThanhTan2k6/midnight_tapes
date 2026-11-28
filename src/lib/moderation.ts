@@ -105,7 +105,7 @@ Trả về DUY NHẤT JSON hợp lệ:
 }`;
 
         const res = await fetch(
-          `${GEMINI_API_BASE}/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+          `${GEMINI_API_BASE}/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
