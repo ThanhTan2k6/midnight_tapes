@@ -129,13 +129,18 @@ class MidnightSoundEngine {
   // LAYER 1: MƯA ĐÊM (FILE MP3 THẬT) & TAPE HISS NHẸ
   // =========================================================================
 
-  public startRain(volume = 0.45, onAutoplayBlocked?: () => void): void {
+  public startRain(
+    volume = 0.45,
+    onAutoplayBlocked?: () => void,
+    onStarted?: () => void
+  ): void {
     if (typeof window === "undefined" || this.rainActive) return;
 
     if (!this.rainAudio) {
       this.rainAudio = new Audio("/audio/midnight-rain.mp3");
       this.rainAudio.loop = true;
       this.rainAudio.preload = "auto";
+      (this.rainAudio as HTMLAudioElement & { playsInline?: boolean }).playsInline = true;
     }
 
     if (this.rainFadeTimer) {
@@ -143,18 +148,23 @@ class MidnightSoundEngine {
       this.rainFadeTimer = null;
     }
 
-    this.rainAudio.volume = 0;
     this.rainTargetVolume = Math.max(0.02, Math.min(1, volume));
+    this.rainAudio.volume = Math.min(0.15, this.rainTargetVolume);
     this.rainActive = true;
 
-    void this.rainAudio.play().catch(() => {
-      if (this.rainFadeTimer) {
-        clearInterval(this.rainFadeTimer);
-        this.rainFadeTimer = null;
-      }
-      this.rainActive = false;
-      onAutoplayBlocked?.();
-    });
+    void this.rainAudio
+      .play()
+      .then(() => {
+        onStarted?.();
+      })
+      .catch(() => {
+        if (this.rainFadeTimer) {
+          clearInterval(this.rainFadeTimer);
+          this.rainFadeTimer = null;
+        }
+        this.rainActive = false;
+        onAutoplayBlocked?.();
+      });
 
     this.rainFadeTimer = setInterval(() => {
       if (!this.rainAudio || !this.rainActive) return;

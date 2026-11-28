@@ -158,24 +158,42 @@ export function AmbientScene() {
     let cleanupGestureListener: (() => void) | null = null;
 
     if (rainEnabled) {
-      soundEngine.startRain(rainVolume, () => {
+      const attachGestureListeners = () => {
+        if (cleanupGestureListener) return;
         const resumeOnGesture = () => {
-          cleanupGestureListener?.();
-          cleanupGestureListener = null;
-          if (useTapeStore.getState().rainEnabled) {
-            void soundEngine.unlock();
-            setAudioUnlocked(true);
-            soundEngine.startRain(useTapeStore.getState().rainVolume);
+          if (!useTapeStore.getState().rainEnabled) {
+            cleanupGestureListener?.();
+            cleanupGestureListener = null;
+            return;
           }
+          // Call startRain synchronously inside touchend/click/keydown for iOS Safari & mobile WebViews
+          void soundEngine.unlock();
+          soundEngine.startRain(
+            useTapeStore.getState().rainVolume,
+            undefined,
+            () => {
+              setAudioUnlocked(true);
+              cleanupGestureListener?.();
+              cleanupGestureListener = null;
+            }
+          );
         };
 
-        window.addEventListener("pointerdown", resumeOnGesture, { once: true });
-        window.addEventListener("keydown", resumeOnGesture, { once: true });
+        window.addEventListener("touchend", resumeOnGesture, { passive: true });
+        window.addEventListener("click", resumeOnGesture, { passive: true });
+        window.addEventListener("keydown", resumeOnGesture);
         cleanupGestureListener = () => {
-          window.removeEventListener("pointerdown", resumeOnGesture);
+          window.removeEventListener("touchend", resumeOnGesture);
+          window.removeEventListener("click", resumeOnGesture);
           window.removeEventListener("keydown", resumeOnGesture);
         };
-      });
+      };
+
+      soundEngine.startRain(
+        rainVolume,
+        attachGestureListeners,
+        () => setAudioUnlocked(true)
+      );
     } else {
       soundEngine.stopRain();
     }
