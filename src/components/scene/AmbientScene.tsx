@@ -264,7 +264,7 @@ export function AmbientScene() {
         }}
       />
 
-      {/* Backdrop Blur Overlay on Desktop when Foreground CassetteDeck is Open */}
+      {/* Backdrop Blur Overlay when Foreground CassetteDeck is Open */}
       <AnimatePresence>
         {deckOpen && (
           <motion.div
@@ -272,7 +272,7 @@ export function AmbientScene() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="hidden md:block fixed inset-0 z-20 bg-black/45 backdrop-blur-md"
+            className="fixed inset-0 z-20 bg-black/45 backdrop-blur-md"
           />
         )}
       </AnimatePresence>
@@ -441,7 +441,7 @@ export function AmbientScene() {
 
       {/* MAIN STAGE */}
       <main className="relative z-30 flex-1 flex flex-col items-center justify-center px-3 py-2 pointer-events-none">
-        {/* Desktop Close-Up Foreground Cassette Deck (Layer 2) */}
+        {/* Close-Up Foreground Cassette Deck (Layer 2) — Mobile & Desktop */}
         <AnimatePresence>
           {deckOpen && (
             <motion.div
@@ -449,7 +449,7 @@ export function AmbientScene() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.92, y: 22 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
-              className="hidden md:flex w-full flex-col items-center pointer-events-auto"
+              className="flex w-full flex-col items-center pointer-events-auto"
             >
               <div className="w-full max-w-[540px] flex justify-end mb-2">
                 <button
@@ -466,10 +466,24 @@ export function AmbientScene() {
           )}
         </AnimatePresence>
 
-        {/* Mobile Walkman POV (< 768px): Directly visible over lightweight rain-on-glass */}
-        <div className="flex md:hidden w-full justify-center pointer-events-auto">
-          <CassetteDeck />
-        </div>
+        {/* Mobile Entrance Prompt when viewing outside rainy cafe scene */}
+        {!deckOpen && (
+          <div className="flex md:hidden fixed bottom-6 inset-x-0 justify-center px-4 pointer-events-auto">
+            <button
+              type="button"
+              onClick={async () => {
+                await soundEngine.unlock();
+                setAudioUnlocked(true);
+                soundEngine.playPlayEngage();
+                setDeckOpen(true);
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#0e1118]/85 border border-amber-400/40 text-xs font-medium text-amber-200 shadow-[0_12px_32px_rgba(0,0,0,0.75)] backdrop-blur-md cursor-pointer active:scale-95 transition-transform"
+            >
+              <Disc3 className="w-4 h-4 text-amber-400" />
+              <span>Mở máy Cassette trên quầy</span>
+            </button>
+          </div>
+        )}
       </main>
 
       {/* Guide, Privacy & License Modal */}
