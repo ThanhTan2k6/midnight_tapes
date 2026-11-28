@@ -61,3 +61,23 @@ export const PSYCH_KNOWLEDGE_BASE: PsychKnowledgeChunk[] = [
       "Khi nỗi đau vượt quá sức chịu đựng khiến con người muốn dừng lại mọi thứ, đó là dấu hiệu bạn cần được một người thật sự có chuyên môn lắng nghe ngay lúc này chứ không phải gánh một mình. Hãy tạm hoãn mọi quyết định trong đêm nay, giữ khoảng cách với vật sắc nhọn, và gọi ngay cho người thân tin cậy hoặc tổng đài miễn phí 096 306 1414 / 111.",
   },
 ];
+
+const REPLY_PFA_HINTS: Record<string, string> = {
+  FINANCE:
+    "Gợi ý Sơ cứu tâm lý: Tránh dạy bảo cách kiếm tiền; hãy công nhận sự cố gắng của họ trước áp lực mưu sinh.",
+  QUARTER_LIFE:
+    "Gợi ý Sơ cứu tâm lý: Đừng vội so sánh hay thúc ép; hãy nhắc họ rằng sự chênh vênh ở tuổi 20s là bình thường.",
+  FAMILY:
+    "Gợi ý Sơ cứu tâm lý: Lắng nghe không phán xét; tránh đổ lỗi cho họ hay gia đình khi chưa rõ câu chuyện.",
+  LONELY:
+    "Gợi ý Sơ cứu tâm lý: Sự hiện diện ấm áp quan trọng hơn lời khuyên; hãy để họ thấy đêm nay có người đang lắng nghe.",
+  LOVE:
+    "Gợi ý Sơ cứu tâm lý: Tránh nói 'có gì đâu mà buồn' hay 'quên đi'; hãy công nhận nỗi buồn chia xa là có thật.",
+};
+
+export function getReplyPfaHint(tag?: string): string {
+  return (
+    (tag && REPLY_PFA_HINTS[tag]) ||
+    "Gợi ý Sơ cứu tâm lý: Lắng nghe dịu dàng, công nhận cảm xúc và tránh phán xét hay dạy đời."
+  );
+}

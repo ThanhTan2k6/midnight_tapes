@@ -25,6 +25,7 @@ import {
   uploadAndPublishTape,
   type PickedTapeItem,
 } from "@/lib/api-client";
+import { getReplyPfaHint } from "@/data/psych-knowledge";
 import {
   AUDIO_CONSTRAINTS,
   TAPE_TAGS,
@@ -788,7 +789,11 @@ export function CassetteDeck() {
                 </span>
               </button>
             ) : isReplying ? (
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2">
+                <p className="text-[11px] leading-relaxed text-amber-200/85 bg-amber-950/35 border border-amber-700/30 rounded-lg px-2.5 py-1.5">
+                  {getReplyPfaHint(pickedTape?.tag)}
+                </p>
+                <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -824,6 +829,7 @@ export function CassetteDeck() {
                     {isSubmitting ? "Đang gửi lời ủi an..." : "Gửi lời ủi an"}
                   </span>
                 </button>
+                </div>
               </div>
             ) : (
               <div className="flex flex-col sm:flex-row gap-2">

@@ -322,3 +322,17 @@ export async function thankReply(replyId: string): Promise<string> {
   }
   return json.message;
 }
+
+export async function requestTapeSupport(
+  tapeId: string
+): Promise<RagSupportPayload> {
+  const res = await fetch(`/api/v1/tapes/${tapeId}/support`, {
+    method: "POST",
+    headers: { ...authHeaders() },
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json.error || "Không thể mở thư từ Chủ tiệm lúc này.");
+  }
+  return json.ragSupport;
+}

@@ -4,37 +4,12 @@ import {
   type PsychKnowledgeChunk,
 } from "@/data/psych-knowledge";
 import { getSupabaseAdmin } from "./supabase";
+import {
+  callGeminiGenerateContent,
+  embedTextWithGemini,
+  getGeminiApiKeys,
+} from "./gemini";
 import type { RagSupportPayload } from "@/types/tape";
-
-const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
-
-/**
- * Tạo vector embedding 768 chiều bằng model gemini-embedding-001.
- */
-async function embedText(text: string): Promise<number[] | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
-
-  try {
-    const res = await fetch(
-      `${GEMINI_API_BASE}/models/gemini-embedding-001:embedContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "models/gemini-embedding-001",
-          content: { parts: [{ text }] },
-          outputDimensionality: 768,
-        }),
-      }
-    );
-    if (!res.ok) return null;
-    const data = (await res.json()) as { embedding?: { values?: number[] } };
-    return data.embedding?.values ?? null;
-  } catch {
-    return null;
-  }
-}
 
 function fallbackLocalRetrieval(
   query: string,
@@ -80,7 +55,7 @@ export async function generatePsychSupport(params: {
   }> = [];
 
   // 1. Try pgvector retrieval first
-  const embedding = await embedText(query);
+  const embedding = await embedTextWithGemini(query);
   if (embedding) {
     try {
       const supabase = getSupabaseAdmin();
@@ -119,9 +94,8 @@ export async function generatePsychSupport(params: {
       ? "HOTLINE_ONLY"
       : retrievedChunks[0]?.exerciseType || "BREATHING_478";
 
-  // 3. Synthesize empathetic grounded letter with gemini-2.5-flash
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (apiKey) {
+  // 3. Synthesize empathetic grounded letter with Gemini key pool + fallback
+  if (getGeminiApiKeys().length > 0) {
     try {
       const contextText = retrievedChunks
         .map((c, idx) => `[${idx + 1}] ${c.title}: ${c.content}`)
@@ -136,31 +110,27 @@ RÀNG BUỘC AN TOÀN BẮT BUỘC:
 - KHÔNG chẩn đoán bệnh ("bạn bị trầm cảm", "bạn bị rối loạn...") và KHÔNG khuyên dùng thuốc.
 - Phản chiếu sự lắng nghe dịu dàng, gợi ý nhẹ bài tập điều hòa cơ thể trong ngữ cảnh trên${params.severity === "CRISIS" ? " và nhấn mạnh họ không đơn độc, hãy gọi ngay tổng đài hỗ trợ bên dưới" : ""}.`;
 
-      const res = await fetch(
-        `${GEMINI_API_BASE}/models/gemini-3-flash-preview:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: "user",
-                parts: [
-                  {
-                    text: `${systemPrompt}\n\nTâm sự của người dùng: "${params.transcript.slice(0, 1200)}"`,
-                  },
-                ],
-              },
-            ],
-            generationConfig: {
-              temperature: 0.45,
-              maxOutputTokens: 320,
+      const res = await callGeminiGenerateContent({
+        models: ["gemini-3-flash-preview", "gemini-3.1-flash-lite"],
+        body: {
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  text: `${systemPrompt}\n\nTâm sự của người dùng: "${params.transcript.slice(0, 1200)}"`,
+                },
+              ],
             },
-          }),
-        }
-      );
+          ],
+          generationConfig: {
+            temperature: 0.45,
+            maxOutputTokens: 320,
+          },
+        },
+      });
 
-      if (res.ok) {
+      if (res && res.ok) {
         const json = (await res.json()) as {
           candidates?: Array<{
             content?: { parts?: Array<{ text?: string }> };

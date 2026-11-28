@@ -2,9 +2,8 @@ import { fetchAudioBytesFromR2 } from "./r2";
 import { getSupabaseAdmin } from "./supabase";
 import { logTapeEvent } from "./events";
 import { generatePsychSupport } from "./psych-rag";
+import { callGeminiGenerateContent, getGeminiApiKeys } from "./gemini";
 import type { RagSupportPayload, SeverityTier, TapeStatus } from "@/types/tape";
-
-const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 
 const PII_REGEX_PATTERNS: Array<{ label: string; regex: RegExp }> = [
   {
@@ -68,7 +67,7 @@ export async function runModerationPipeline(params: {
   actorHash: string;
 }): Promise<ModerationOutcome> {
   const supabase = getSupabaseAdmin();
-  const apiKey = process.env.GEMINI_API_KEY;
+  const hasGeminiKey = getGeminiApiKeys().length > 0;
 
   let transcript = "";
   let validatedVerdict: Verdict | null = null;
@@ -76,66 +75,62 @@ export async function runModerationPipeline(params: {
   let toxicityScore = 0;
   let distressKeywords: string[] = [];
 
-  if (apiKey) {
+  if (hasGeminiKey) {
     const audioFile = await fetchAudioBytesFromR2(params.audioPath);
     if (audioFile) {
       try {
         const base64Audio = Buffer.from(audioFile.bytes).toString("base64");
+        const replyEmpathyRule =
+          params.targetType === "REPLY"
+            ? `\n4. UNHELPFUL_REPLY: Đây là LỜI HỒI ÂM gửi tới người đang buồn. Hãy REJECT nếu lời nói quá hời hợt, cợt nhả, đổ lỗi nạn nhân, dạy đời phán xét nặng nề (ví dụ: "yếu đuối thế", "có gì đâu mà buồn", "kệ đi"), hoặc spam vô nghĩa không mang tính lắng nghe/ủi an.`
+            : "";
+
         const prompt = `Bạn là Người Gác Đêm tại "Tiệm Băng Nửa Đêm". Hãy nghe đoạn ghi âm tiếng Việt đính kèm, bóc băng chính xác (transcript) và phân loại an toàn.
 
 QUY TẮC CẤM (REJECT):
 1. PII: Số điện thoại, link mạng xã hội (Facebook, Zalo, Telegram, TikTok), địa chỉ nhà, STK ngân hàng.
 2. TOXICITY: Chửi bới xúc phạm người khác, phân biệt vùng miền, thù ghét, đe dọa.
-3. SOLICITATION: Gạ gẫm hẹn hò, mại dâm, cờ bạc, đa cấp, vay nợ.
+3. SOLICITATION: Gạ gẫm hẹn hò, mại dâm, cờ bạc, đa cấp, vay nợ.${replyEmpathyRule}
 
 PHÂN LOẠI MỨC ĐỘ:
 - PASS: Tâm sự, than thở áp lực, buồn bã thông thường, lời ủi an chân thành.
 - HEAVY_DISTRESS: Kiệt sức tinh thần nặng, bế tắc sâu sắc, khóc nức nở, cảm giác vô vọng (nhưng chưa có ý định tự hại).
 - CRISIS: Có dấu hiệu hoặc ý định tự làm đau bản thân, tự tử.
-- REJECT: Vi phạm PII, TOXICITY hoặc SOLICITATION.
+- REJECT: Vi phạm PII, TOXICITY, SOLICITATION${params.targetType === "REPLY" ? " hoặc UNHELPFUL_REPLY" : ""}.
 
 Trả về DUY NHẤT JSON hợp lệ:
 {
   "transcript": "nội dung nghe được",
   "verdict": "PASS" | "HEAVY_DISTRESS" | "CRISIS" | "REJECT",
   "reason": "lý do ngắn gọn bằng tiếng Việt nếu REJECT, ngược lại rỗng",
-  "category": "NONE" | "PII" | "TOXICITY" | "SOLICITATION" | "HEAVY_DEPRESSION" | "SELF_HARM",
+  "category": "NONE" | "PII" | "TOXICITY" | "SOLICITATION" | "UNHELPFUL_REPLY" | "HEAVY_DEPRESSION" | "SELF_HARM",
   "distressKeywords": ["từ khóa tâm lý nếu có"],
   "confidenceScore": 0.9
 }`;
 
-        let res: Response | null = null;
-        for (const model of ["gemini-3-flash-preview", "gemini-3.1-flash-lite"]) {
-          const attempt = await fetch(
-            `${GEMINI_API_BASE}/models/${model}:generateContent?key=${apiKey}`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                contents: [
+        const res = await callGeminiGenerateContent({
+          models: ["gemini-3.1-flash-lite", "gemini-3-flash-preview"],
+          body: {
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  { text: prompt },
                   {
-                    role: "user",
-                    parts: [
-                      { text: prompt },
-                      {
-                        inlineData: {
-                          mimeType: audioFile.contentType.split(";")[0],
-                          data: base64Audio,
-                        },
-                      },
-                    ],
+                    inlineData: {
+                      mimeType: audioFile.contentType.split(";")[0],
+                      data: base64Audio,
+                    },
                   },
                 ],
-                generationConfig: {
-                  responseMimeType: "application/json",
-                  temperature: 0.1,
-                },
-              }),
-            }
-          );
-          res = attempt;
-          if (attempt.ok) break;
-        }
+              },
+            ],
+            generationConfig: {
+              responseMimeType: "application/json",
+              temperature: 0.1,
+            },
+          },
+        });
 
         if (res && res.ok) {
           const json = (await res.json()) as {

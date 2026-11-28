@@ -15,6 +15,7 @@ import {
 import {
   fetchMyMailbox,
   getLocalTapeLogs,
+  requestTapeSupport,
   thankReply,
   type LocalTapeLogEntry,
   type MailboxTapeItem,
@@ -38,6 +39,7 @@ export function MailboxPanel() {
   const [activeSupport, setActiveSupport] = useState<RagSupportPayload | null>(
     null
   );
+  const [loadingSupportId, setLoadingSupportId] = useState<string | null>(null);
   const [playingReplyId, setPlayingReplyId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -132,6 +134,26 @@ export function MailboxPanel() {
     }
   };
 
+  const handleOpenOwnerSupport = async (tapeId: string) => {
+    await soundEngine.unlock();
+    setLoadingSupportId(tapeId);
+    try {
+      const payload = await requestTapeSupport(tapeId);
+      setTapes((prev) =>
+        prev.map((t) => (t.id === tapeId ? { ...t, ragSupport: payload } : t))
+      );
+      setActiveSupport(payload);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Chưa thể mở thư từ Chủ tiệm lúc này."
+      );
+    } finally {
+      setLoadingSupportId(null);
+    }
+  };
+
   if (activeSupport) {
     return (
       <PsychSupportCard
@@ -217,7 +239,7 @@ export function MailboxPanel() {
               </div>
             )}
 
-            {t.ragSupport && (
+            {t.ragSupport ? (
               <button
                 type="button"
                 onClick={() => setActiveSupport(t.ragSupport)}
@@ -226,6 +248,22 @@ export function MailboxPanel() {
                 <HeartHandshake className="w-3.5 h-3.5" />
                 <span>Mở Lá thư ủi an từ Gác Đêm</span>
               </button>
+            ) : (
+              t.status === "ACTIVE" && (
+                <button
+                  type="button"
+                  disabled={loadingSupportId === t.id}
+                  onClick={() => void handleOpenOwnerSupport(t.id)}
+                  className="inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-stone-900/90 border border-stone-700/80 text-[11px] text-stone-300 hover:text-amber-200 hover:border-amber-500/40 cursor-pointer disabled:opacity-50"
+                >
+                  <HeartHandshake className="w-3.5 h-3.5 text-amber-400/80" />
+                  <span>
+                    {loadingSupportId === t.id
+                      ? "Chủ tiệm đang viết thư..."
+                      : "Vẫn thấy nặng lòng? Mở thư từ Chủ tiệm"}
+                  </span>
+                </button>
+              )
             )}
 
             {t.reply && (
