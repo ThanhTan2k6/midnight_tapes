@@ -6,6 +6,7 @@ import {
   CloudRain,
   Disc3,
   Inbox,
+  Info,
   Users,
   Volume2,
   VolumeX,
@@ -37,6 +38,7 @@ export function AmbientScene() {
   const [notificationText, setNotificationText] = useState<string | null>(null);
   const [onlineCount, setOnlineCount] = useState(1);
   const [activeTapesCount, setActiveTapesCount] = useState(0);
+  const [infoOpen, setInfoOpen] = useState(false);
 
   const prevUnreadRef = useRef(false);
   const prevTeaCountRef = useRef<number | null>(null);
@@ -374,6 +376,17 @@ export function AmbientScene() {
               </div>
             )}
           </div>
+
+          {/* Guide & License Info Button */}
+          <button
+            type="button"
+            onClick={() => setInfoOpen(true)}
+            aria-label="Hướng dẫn sử dụng và thông tin giấy phép"
+            title="Hướng dẫn & Quyền riêng tư"
+            className="bg-[#0e1118]/75 hover:bg-[#151a24]/85 backdrop-blur-md border border-amber-400/20 hover:border-amber-400/45 rounded-2xl p-2.5 shadow-[0_12px_32px_rgba(0,0,0,0.65)] text-stone-300 hover:text-amber-200 transition-colors cursor-pointer"
+          >
+            <Info className="w-4 h-4" />
+          </button>
         </div>
       </header>
 
@@ -448,6 +461,98 @@ export function AmbientScene() {
           <CassetteDeck />
         </div>
       </main>
+
+      {/* Guide, Privacy & License Modal */}
+      <AnimatePresence>
+        {infoOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setInfoOpen(false)}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl bg-[#10131b]/95 border border-amber-400/25 p-5 text-stone-200 shadow-[0_24px_60px_rgba(0,0,0,0.85)] flex flex-col gap-4"
+            >
+              <div className="flex items-center justify-between gap-3 border-b border-stone-800 pb-3">
+                <div>
+                  <h2 className="text-sm font-semibold tracking-wide text-amber-200">
+                    TIỆM BĂNG NỬA ĐÊM — HƯỚNG DẪN &amp; QUY ĐỊNH
+                  </h2>
+                  <p className="text-[11px] text-stone-400">
+                    Góc trú mưa ẩn danh bằng giọng nói
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setInfoOpen(false)}
+                  aria-label="Đóng hướng dẫn"
+                  className="p-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-stone-400 hover:text-stone-200 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <section className="flex flex-col gap-1.5 text-xs text-stone-300 leading-relaxed">
+                <h3 className="font-semibold text-amber-300/90">
+                  1. Cách sử dụng
+                </h3>
+                <ul className="list-disc pl-4 space-y-1 text-stone-300/90">
+                  <li>
+                    <strong>Thu &amp; Thả băng:</strong> Chọn nhãn cảm xúc, bấm{" "}
+                    <strong>REC</strong> để thu tâm sự (5 giây – 7 phút). Có thể bật{" "}
+                    <em>Đổi giọng ẩn danh</em> trước khi thả vào màn đêm.
+                  </li>
+                  <li>
+                    <strong>Nhặt băng &amp; Ủi an:</strong> Chuyển sang mục Nghe để nhặt ngẫu nhiên 1 cuộn băng của người lạ, gửi <em>Tách trà ấm</em> hoặc thu âm lời hồi âm (tối đa 3 phút).
+                  </li>
+                  <li>
+                    <strong>Hòm thư Gác Đêm:</strong> Kiểm tra lượt nghe, tách trà ấm, lời hồi âm từ người lạ hoặc mở <em>Thư từ Chủ tiệm</em> nếu vẫn thấy nặng lòng.
+                  </li>
+                </ul>
+              </section>
+
+              <section className="flex flex-col gap-1.5 text-xs text-stone-300 leading-relaxed">
+                <h3 className="font-semibold text-amber-300/90">
+                  2. Quyền riêng tư &amp; Tự hủy 24h
+                </h3>
+                <ul className="list-disc pl-4 space-y-1 text-stone-300/90">
+                  <li>
+                    <strong>Ẩn danh hoàn toàn:</strong> Không yêu cầu đăng nhập, không thu thập tên, email hay số điện thoại.
+                  </li>
+                  <li>
+                    <strong>Tự tan biến sau 24 giờ:</strong> Toàn bộ file âm thanh và cuộn băng được tự động xóa vĩnh viễn khỏi hệ thống sau 24h.
+                  </li>
+                  <li>
+                    <strong>An toàn cộng đồng:</strong> Cấm chia sẻ thông tin cá nhân (SĐT, Zalo, link MXH), nội dung xúc phạm, gạ gẫm hoặc lừa đảo.
+                  </li>
+                </ul>
+              </section>
+
+              <section className="flex flex-col gap-1.5 text-xs text-stone-300 leading-relaxed">
+                <h3 className="font-semibold text-amber-300/90">
+                  3. Miễn trừ y tế &amp; Giấy phép (License)
+                </h3>
+                <p className="text-stone-300/90">
+                  Tiệm Băng Nửa Đêm là không gian lắng nghe cộng đồng phi thương mại,{" "}
+                  <strong>không thay thế</strong> chẩn đoán hay điều trị tâm lý/y khoa chuyên nghiệp. Nếu bạn đang trong tình huống khẩn cấp, hãy liên hệ{" "}
+                  <strong>115</strong>, Tổng đài Quốc gia <strong>111</strong> (24/24) hoặc Đường dây nóng Ngày Mai{" "}
+                  <strong>096 306 1414</strong>.
+                </p>
+                <p className="text-[11px] text-stone-400">
+                  © {new Date().getFullYear()} Tiệm Băng Nửa Đêm • Nội dung âm thanh thuộc về người gửi ẩn danh và tự hủy sau 24h.
+                </p>
+              </section>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
