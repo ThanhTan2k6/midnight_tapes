@@ -104,35 +104,40 @@ Trả về DUY NHẤT JSON hợp lệ:
   "confidenceScore": 0.9
 }`;
 
-        const res = await fetch(
-          `${GEMINI_API_BASE}/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [
-                {
-                  role: "user",
-                  parts: [
-                    { text: prompt },
-                    {
-                      inlineData: {
-                        mimeType: audioFile.contentType.split(";")[0],
-                        data: base64Audio,
+        let res: Response | null = null;
+        for (const model of ["gemini-3-flash-preview", "gemini-3.1-flash-lite"]) {
+          const attempt = await fetch(
+            `${GEMINI_API_BASE}/models/${model}:generateContent?key=${apiKey}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [
+                  {
+                    role: "user",
+                    parts: [
+                      { text: prompt },
+                      {
+                        inlineData: {
+                          mimeType: audioFile.contentType.split(";")[0],
+                          data: base64Audio,
+                        },
                       },
-                    },
-                  ],
+                    ],
+                  },
+                ],
+                generationConfig: {
+                  responseMimeType: "application/json",
+                  temperature: 0.1,
                 },
-              ],
-              generationConfig: {
-                responseMimeType: "application/json",
-                temperature: 0.1,
-              },
-            }),
-          }
-        );
+              }),
+            }
+          );
+          res = attempt;
+          if (attempt.ok) break;
+        }
 
-        if (res.ok) {
+        if (res && res.ok) {
           const json = (await res.json()) as {
             candidates?: Array<{
               content?: { parts?: Array<{ text?: string }> };
